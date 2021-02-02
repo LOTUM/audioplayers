@@ -798,7 +798,7 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
         // Thus it should represent integer seconds and not an accurate `CMTime` value with fractions of a second
         let elapsedTime = Int(time.seconds)
         
-        var playingInfo: [String: Any?] = [
+        let playingInfo: [String: Any?] = [
             MPMediaItemPropertyTitle: title,
             MPMediaItemPropertyAlbumTitle: albumTitle,
             MPMediaItemPropertyArtist: artist,
@@ -811,6 +811,7 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
 
         // fetch notification image in async fashion to avoid freezing UI
         DispatchQueue.global().async() { [weak self] in
+            /*
             if let imageUrl = self?.imageUrl {
                 let artworkImage: UIImage? = SwiftAudioplayersPlugin.geneateImageFromUrl(urlString: imageUrl)
                 if let artworkImage = artworkImage {
@@ -819,6 +820,7 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
                     playingInfo[MPMediaItemPropertyArtwork] = albumArt
                 }
             }
+            */
 
             if let infoCenter = self?.infoCenter {
                 let filteredMap = playingInfo.filter { $0.value != nil }.mapValues { $0! }
