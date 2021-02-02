@@ -540,34 +540,36 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
                 let interval: CMTime = toCMTime(millis: 0.2)
                 let timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: nil) {
                     [weak self] time in
-                    self!.onTimeInterval(playerId: playerId, time: time)
+                    self?.onTimeInterval(playerId: playerId, time: time)
                 }
                 self.timeObservers.append(TimeObserver(player: player, observer: timeObserver))
             }
             
             let anObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem, queue: nil) {
                 [weak self] (notification) in
-                self!.onSoundComplete(playerId: playerId)
+                self?.onSoundComplete(playerId: playerId)
             }
             playerInfo.observers.append(TimeObserver(player: player, observer: anObserver))
             
             // is sound ready
             playerInfo.onReady = onReady
-            let newKeyValueObservation: NSKeyValueObservation = playerItem.observe(\AVPlayerItem.status) { (playerItem, change) in
+            let newKeyValueObservation: NSKeyValueObservation = playerItem.observe(\AVPlayerItem.status) { [weak self] (playerItem, change) in
                 let status = playerItem.status
                 log("player status: %@ change: %@", status, change)
                 
                 // Do something with the status...
                 if status == .readyToPlay {
-                    self.updateDuration(playerId: playerId)
+                    self?.updateDuration(playerId: playerId)
                     
-                    let onReady: VoidCallback? = playerInfo.onReady
-                    if onReady != nil {
+                    if let onReady = playerInfo.onReady {
                         playerInfo.onReady = nil
-                        onReady!(playerId)
+                        if let observation = self?.keyValueObservations[playerId] {
+                            observation.invalidate()
+                        }
+                        onReady(playerId)
                     }
                 } else if status == .failed {
-                    self.channel.invokeMethod("audio.onError", arguments: ["playerId": playerId, "value": "AVPlayerItem.Status.failed"])
+                    self?.channel.invokeMethod("audio.onError", arguments: ["playerId": playerId, "value": "AVPlayerItem.Status.failed"])
                 }
             }
             
@@ -577,6 +579,9 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
             keyValueObservations[playerId] = newKeyValueObservation
         } else {
             if playbackStatus == .readyToPlay {
+                if let observation = keyValueObservations[playerId] {
+                    observation.invalidate()
+                }
                 onReady(playerId)
             }
         }
@@ -696,7 +701,9 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
     }
     
     func stop(playerId: String) {
-        let playerInfo: PlayerInfo = players[playerId]!
+        guard let playerInfo = players[playerId] else {
+            return
+        }
         if playerInfo.isPlaying {
             self.pause(playerId: playerId)
             playerInfo.isPlaying = false
@@ -705,7 +712,9 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
     }
     
     func seek(playerId: String, time: CMTime) {
-        let playerInfo: PlayerInfo = players[playerId]!
+        guard let playerInfo = players[playerId] else {
+            return
+        }
         let player = playerInfo.player
         
         #if os(iOS)
@@ -727,8 +736,10 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
     
     func onSoundComplete(playerId: String) {
         log("%@ -> onSoundComplete...", osName)
-        let playerInfo: PlayerInfo = players[playerId]!
-        
+        guard let playerInfo = players[playerId] else {
+            return
+        }
+
         if !playerInfo.isPlaying {
             return
         }
