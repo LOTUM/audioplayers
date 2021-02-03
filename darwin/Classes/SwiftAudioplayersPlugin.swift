@@ -563,9 +563,7 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
                     
                     if let onReady = playerInfo.onReady {
                         playerInfo.onReady = nil
-                        if let observation = self?.keyValueObservations[playerId] {
-                            observation.invalidate()
-                        }
+                        self?.keyValueObservations[playerId]?.invalidate()
                         onReady(playerId)
                     }
                 } else if status == .failed {
@@ -573,15 +571,11 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
                 }
             }
             
-            if let observation = keyValueObservations[playerId] {
-                observation.invalidate()
-            }
+            keyValueObservations[playerId]?.invalidate()
             keyValueObservations[playerId] = newKeyValueObservation
         } else {
             if playbackStatus == .readyToPlay {
-                if let observation = keyValueObservations[playerId] {
-                    observation.invalidate()
-                }
+                keyValueObservations[playerId]?.invalidate()
                 onReady(playerId)
             }
         }
