@@ -695,9 +695,7 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
     }
     
     func stop(playerId: String) {
-        guard let playerInfo = players[playerId] else {
-            return
-        }
+        let playerInfo: PlayerInfo = players[playerId]!
         if playerInfo.isPlaying {
             self.pause(playerId: playerId)
             playerInfo.isPlaying = false
@@ -706,9 +704,7 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
     }
     
     func seek(playerId: String, time: CMTime) {
-        guard let playerInfo = players[playerId] else {
-            return
-        }
+        let playerInfo: PlayerInfo = players[playerId]!
         let player = playerInfo.player
         
         #if os(iOS)
@@ -730,9 +726,7 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
     
     func onSoundComplete(playerId: String) {
         log("%@ -> onSoundComplete...", osName)
-        guard let playerInfo = players[playerId] else {
-            return
-        }
+        let playerInfo: PlayerInfo = players[playerId]!
 
         if !playerInfo.isPlaying {
             return
