@@ -553,26 +553,29 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
             
             // is sound ready
             playerInfo.onReady = onReady
-            let newKeyValueObservation: NSKeyValueObservation = playerItem.observe(\AVPlayerItem.status) { [weak self] (playerItem, change) in
-                let status = playerItem.status
-                log("player status: %@ change: %@", status, change)
-                
-                // Do something with the status...
-                if status == .readyToPlay {
-                    self?.updateDuration(playerId: playerId)
-                    
-                    if let onReady = playerInfo.onReady {
-                        playerInfo.onReady = nil
-                        self?.keyValueObservations[playerId]?.invalidate()
-                        onReady(playerId)
+
+            ensureMainthread {
+                let newKeyValueObservation: NSKeyValueObservation = playerItem.observe(\AVPlayerItem.status) { [weak self] (playerItem, change) in
+                    let status = playerItem.status
+                    log("player status: %@ change: %@", status, change)
+
+                    // Do something with the status...
+                    if status == .readyToPlay {
+                        self?.updateDuration(playerId: playerId)
+
+                        if let onReady = playerInfo.onReady {
+                            playerInfo.onReady = nil
+                            self?.keyValueObservations[playerId]?.invalidate()
+                            onReady(playerId)
+                        }
+                    } else if status == .failed {
+                        self?.channel.invokeMethod("audio.onError", arguments: ["playerId": playerId, "value": "AVPlayerItem.Status.failed"])
                     }
-                } else if status == .failed {
-                    self?.channel.invokeMethod("audio.onError", arguments: ["playerId": playerId, "value": "AVPlayerItem.Status.failed"])
                 }
+
+                self.keyValueObservations[playerId]?.invalidate()
+                self.keyValueObservations[playerId] = newKeyValueObservation
             }
-            
-            keyValueObservations[playerId]?.invalidate()
-            keyValueObservations[playerId] = newKeyValueObservation
         } else {
             if playbackStatus == .readyToPlay {
                 keyValueObservations[playerId]?.invalidate()
@@ -759,7 +762,17 @@ public class SwiftAudioplayersPlugin: NSObject, FlutterPlugin {
         }
         #endif
     }
-    
+
+    private func ensureMainthread(_ closure: @escaping () -> Void) {
+        if Thread.current.isMainThread {
+            closure()
+            return
+        }
+        DispatchQueue.main.async {
+            closure()
+        }
+    }
+
     // notifications
 
     #if os(iOS)
